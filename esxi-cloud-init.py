@@ -37,7 +37,7 @@ def load_user_data():
             if line.startswith('#'):
                 continue
             k, v = line.split(': ', 1)
-            user_data[k] = v
+            user_data[k] = v.rstrip()
         return user_data
 
 def set_hostname(meta_data):
