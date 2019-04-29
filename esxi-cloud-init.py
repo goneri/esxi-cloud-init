@@ -35,7 +35,7 @@ def load_meta_data():
 def load_user_data():
     # Should be openstack/latest/user-data
     user_data = {}
-    with open('/vmfs/volumes/cidata/OPENSTAC/LATEST/USER-DAT', 'r') as fd:
+    with open('/vmfs/volumes/cidata/OPENSTAC/LATEST/USER_DAT', 'r') as fd:
         for line in fd.readlines():
             if line.startswith('#'):
                 continue
