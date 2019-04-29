@@ -21,15 +21,12 @@ def umount_cdrom(cdrom_dev):
 def load_network_data():
     # Should be openstack/latest/network_data.json
     with open('/vmfs/volumes/cidata/OPENSTAC/LATEST/NETWORK_.JSO', 'r') as fd:
-        from pprint import pprint
         return json.loads(fd.read())
 
 def load_meta_data():
     # Should be openstack/latest/meta_data.json
     with open('/vmfs/volumes/cidata/OPENSTAC/LATEST/META_DAT.JSO', 'r') as fd:
-        from pprint import pprint
         data = json.loads(fd.read())
-        pprint(data)
         return data
 
 def load_user_data():
