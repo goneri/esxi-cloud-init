@@ -67,16 +67,17 @@ def set_network(network_data):
         ifdef = network_data['networks'][i]
         if ifdef['type'] == 'ipv4':
             run_cmd(['esxcli', 'network', 'ip', 'interface', 'ipv4', 'set', '-i', 'vmk%i' % i, '-g', ifdef['routes'][0]['gateway'], '-I', ifdef['ip_address'], '-N', ifdef['netmask'], '-t', 'static'])
-            for r in ifdef['routes']:
-                if r['network'] == '0.0.0.0':
-                    network = 'default'
-                else:
-                    network = r['network']
-                run_cmd(['esxcli', 'network', 'ip', 'route', 'ipv4', 'add', '-g', r['gateway'], '-n', network])
         else:
             run_cmd(['esxcli', 'network', 'ip', 'interface', 'ipv4', 'set', '-i', 'vmk%i' % i, '-t', 'dhcp'])
 
-    for s in network_data['services']:
+    for r in network_data.get('routes', []):
+        if r['network'] == '0.0.0.0':
+            network = 'default'
+        else:
+            network = r['network']
+        run_cmd(['esxcli', 'network', 'ip', 'route', 'ipv4', 'add', '-g', r['gateway'], '-n', network])
+
+    for s in network_data.get('services', []):
         if s['type'] == 'dns':
             run_cmd(['esxcli', 'network', 'ip', 'dns', 'server', 'add', '--server', s['address']])
 
