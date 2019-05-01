@@ -5,18 +5,26 @@ import re
 import subprocess
 import json
 
+def run_cmd(args, ignore_failure=False):
+    print('run: %s' % args)
+    try:
+        return subprocess.check_output(args)
+    except subprocess.CalledProcessError:
+        if not ignore_failure:
+            raise
+
 def find_cdrom_dev():
-    mpath_b = subprocess.check_output(['esxcfg-mpath', '-b'])
+    mpath_b = run_cmd(['esxcfg-mpath', '-b'])
     for line in mpath_b.decode().split('\n'):
         m = re.match(r'^(\S*).*\sCD-ROM\s.*', line)
         if m:
             return m.group(1)
 
 def mount_cdrom(cdrom_dev):
-    subprocess.call(['vsish', '-e', 'set', '/vmkModules/iso9660/mount', cdrom_dev])
+    run_cmd(['vsish', '-e', 'set', '/vmkModules/iso9660/mount', cdrom_dev])
 
 def umount_cdrom(cdrom_dev):
-    subprocess.call(['vsish', '-e', 'set', '/vmkModules/iso9660/umount', cdrom_dev])
+    run_cmd(['vsish', '-e', 'set', '/vmkModules/iso9660/umount', cdrom_dev])
 
 def load_network_data():
     # Should be openstack/latest/network_data.json
@@ -42,27 +50,35 @@ def load_user_data():
 
 def set_hostname(meta_data):
     host = meta_data['hostname']
-    subprocess.call(['esxcli', 'system', 'hostname', 'set', '--host=%s' % host])
+    run_cmd(['esxcli', 'system', 'hostname', 'set', '--host=%s' % host])
 
 def set_network(network_data):
-    subprocess.call(['esxcli', 'network', 'ip', 'dns', 'server', 'remove', '--all'])
+    run_cmd(['esxcfg-vmknic', '-d', 'VM Network'], ignore_failure=True)
+    run_cmd(['esxcfg-vmknic', '-d', 'Management Network'], ignore_failure=True)
+    run_cmd(['esxcfg-vswitch', '-d', 'vSwitch0'])
+    run_cmd(['esxcfg-vswitch', '-a', 'vSwitch0'])
+    run_cmd(['esxcfg-vswitch', '-L', 'vmnic0', 'vSwitch0'])
+    run_cmd(['esxcfg-vswitch', '-A', 'VM Network', 'vSwitch0'])
+    run_cmd(['esxcfg-vswitch', '-A', 'Management Network', 'vSwitch0'])
+    run_cmd(['esxcli', 'network', 'ip', 'interface', 'add', '-i', 'vmk0', '-p', 'Management Network'])
+    open('/etc/resolv.conf', 'w').close()
     # Assuming one network per interface and interfaces are in the good order
     for i in range(len(network_data['networks'])):
         ifdef = network_data['networks'][i]
         if ifdef['type'] == 'ipv4':
-            subprocess.call(['esxcli', 'network', 'ip', 'interface', 'ipv4', 'set', '-i', 'vmk%i' % i, '-g', ifdef['routes'][0]['gateway'], '-I', ifdef['ip_address'], '-N', ifdef['netmask'], '-t', 'static'])
+            run_cmd(['esxcli', 'network', 'ip', 'interface', 'ipv4', 'set', '-i', 'vmk%i' % i, '-g', ifdef['routes'][0]['gateway'], '-I', ifdef['ip_address'], '-N', ifdef['netmask'], '-t', 'static'])
             for r in ifdef['routes']:
                 if r['network'] == '0.0.0.0':
                     network = 'default'
                 else:
                     network = r['network']
-                subprocess.call(['esxcli', 'network', 'ip', 'route', 'ipv4', 'add', '-g', r['gateway'], '-n', network])
+                run_cmd(['esxcli', 'network', 'ip', 'route', 'ipv4', 'add', '-g', r['gateway'], '-n', network])
         else:
-            subprocess.call(['esxcli', 'network', 'ip', 'interface', 'ipv4', 'set', '-i', 'vmk%i' % i, '-t', 'dhcp'])
+            run_cmd(['esxcli', 'network', 'ip', 'interface', 'ipv4', 'set', '-i', 'vmk%i' % i, '-t', 'dhcp'])
 
     for s in network_data['services']:
         if s['type'] == 'dns':
-            subprocess.call(['esxcli', 'network', 'ip', 'dns', 'server', 'add', '--server', s['address']])
+            run_cmd(['esxcli', 'network', 'ip', 'dns', 'server', 'add', '--server', s['address']])
 
 def set_ssh_keys(meta_data):
     # A bit hackish because PyYAML because ESXi's Python does not provide PyYAML
@@ -101,7 +117,7 @@ def set_root_pw(user_data):
 
 
 try:
-    subprocess.call(['vmkload_mod', 'iso9660'])
+    run_cmd(['vmkload_mod', 'iso9660'])
     cdrom_dev = find_cdrom_dev()
     mount_cdrom(cdrom_dev)
     network_data = load_network_data()
@@ -114,4 +130,4 @@ try:
     allow_nested_vm()
 finally:
     umount_cdrom(cdrom_dev)
-    subprocess.call(['vmkload_mod', '-u', 'iso9660'])
+    run_cmd(['vmkload_mod', '-u', 'iso9660'])
