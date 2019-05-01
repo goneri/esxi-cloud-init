@@ -61,12 +61,15 @@ def set_network(network_data):
     run_cmd(['esxcfg-vswitch', '-A', 'VM Network', 'vSwitch0'])
     run_cmd(['esxcfg-vswitch', '-A', 'Management Network', 'vSwitch0'])
     run_cmd(['esxcli', 'network', 'ip', 'interface', 'add', '-i', 'vmk0', '-p', 'Management Network'])
+    # ESX's switch has no learning mode and enforce the MAC/port by default
+    # With this line, we ensure a nested ESXi can contact the outside world
+    run_cmd(['esxcli', 'network', 'vswitch', 'standard', 'policy', 'security', 'set', '--allow-promiscuous=1', '--allow-forged-transmits=1', '--allow-mac-change=1', '--vswitch-name=vSwitch0'])
     open('/etc/resolv.conf', 'w').close()
     # Assuming one network per interface and interfaces are in the good order
     for i in range(len(network_data['networks'])):
         ifdef = network_data['networks'][i]
         if ifdef['type'] == 'ipv4':
-            run_cmd(['esxcli', 'network', 'ip', 'interface', 'ipv4', 'set', '-i', 'vmk%i' % i, '-g', ifdef['routes'][0]['gateway'], '-I', ifdef['ip_address'], '-N', ifdef['netmask'], '-t', 'static'])
+            run_cmd(['esxcli', 'network', 'ip', 'interface', 'ipv4', 'set', '-i', 'vmk%i' % i, '-I', ifdef['ip_address'], '-N', ifdef['netmask'], '-t', 'static'])
         else:
             run_cmd(['esxcli', 'network', 'ip', 'interface', 'ipv4', 'set', '-i', 'vmk%i' % i, '-t', 'dhcp'])
 
