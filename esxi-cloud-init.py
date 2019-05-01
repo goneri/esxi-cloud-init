@@ -52,7 +52,11 @@ def set_network(network_data):
         if ifdef['type'] == 'ipv4':
             subprocess.call(['esxcli', 'network', 'ip', 'interface', 'ipv4', 'set', '-i', 'vmk%i' % i, '-g', ifdef['routes'][0]['gateway'], '-I', ifdef['ip_address'], '-N', ifdef['netmask'], '-t', 'static'])
             for r in ifdef['routes']:
-                subprocess.call(['esxcli', 'network', 'ip', 'route', 'ipv4', 'add', '-g', r['gateway'], '-n', r['network']])
+                if r['network'] == '0.0.0.0':
+                    network = 'default'
+                else:
+                    network = r['network']
+                subprocess.call(['esxcli', 'network', 'ip', 'route', 'ipv4', 'add', '-g', r['gateway'], '-n', network])
         else:
             subprocess.call(['esxcli', 'network', 'ip', 'interface', 'ipv4', 'set', '-i', 'vmk%i' % i, '-t', 'dhcp'])
 
