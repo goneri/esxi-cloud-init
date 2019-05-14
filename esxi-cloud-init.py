@@ -73,11 +73,11 @@ def set_network(network_data):
         else:
             run_cmd(['esxcli', 'network', 'ip', 'interface', 'ipv4', 'set', '-i', 'vmk%i' % i, '-t', 'dhcp'])
 
-    for r in network_data.get('routes', []):
-        if r['network'] == '0.0.0.0':
-            network = 'default'
-        else:
-            network = r['network']
+        for r in ifdef.get('routes', []):
+            if r['network'] == '0.0.0.0':
+                network = 'default'
+            else:
+                network = r['network']
         run_cmd(['esxcli', 'network', 'ip', 'route', 'ipv4', 'add', '-g', r['gateway'], '-n', network])
 
     for s in network_data.get('services', []):
