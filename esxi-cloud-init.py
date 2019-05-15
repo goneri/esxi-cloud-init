@@ -119,10 +119,13 @@ def set_root_pw(user_data):
                 s[1] = hashed_pw
             fd.write(':'.join(s))
 
+def turn_off_firewall():
+    run_cmd(['esxcli', 'network', 'firewall', 'set', '--enabled', 'false'])
 
+
+cdrom_dev = find_cdrom_dev()
 try:
     run_cmd(['vmkload_mod', 'iso9660'])
-    cdrom_dev = find_cdrom_dev()
     mount_cdrom(cdrom_dev)
     network_data = load_network_data()
     set_network(network_data)
@@ -132,6 +135,7 @@ try:
     user_data = load_user_data()
     set_root_pw(user_data)
     allow_nested_vm()
+    turn_off_firewall()
 finally:
     umount_cdrom(cdrom_dev)
     run_cmd(['vmkload_mod', '-u', 'iso9660'])
