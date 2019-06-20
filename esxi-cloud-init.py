@@ -61,6 +61,8 @@ def set_network(network_data):
     run_cmd(['esxcfg-vswitch', '-A', 'VM Network', 'vSwitch0'])
     run_cmd(['esxcfg-vswitch', '-A', 'Management Network', 'vSwitch0'])
     run_cmd(['esxcli', 'network', 'ip', 'interface', 'add', '-i', 'vmk0', '-p', 'Management Network'])
+    run_cmd(['esxcli', 'network', 'ip', 'set', '--ipv6-enabled=0'])
+
     # ESX's switch has no learning mode and enforce the MAC/port by default
     # With this line, we ensure a nested ESXi can contact the outside world
     run_cmd(['esxcli', 'network', 'vswitch', 'standard', 'policy', 'security', 'set', '--allow-promiscuous=1', '--allow-forged-transmits=1', '--allow-mac-change=1', '--vswitch-name=vSwitch0'])
@@ -122,6 +124,9 @@ def set_root_pw(user_data):
 def turn_off_firewall():
     run_cmd(['esxcli', 'network', 'firewall', 'set', '--enabled', 'false'])
 
+def restart_service(service_name):
+    run_cmd(['/etc/init.d/%s' % service_name , 'restart'])
+
 
 cdrom_dev = find_cdrom_dev()
 try:
@@ -135,7 +140,8 @@ try:
     user_data = load_user_data()
     set_root_pw(user_data)
     allow_nested_vm()
-    turn_off_firewall()
+    restart_service('hostd')
+    restart_service('vpxa')
 finally:
     umount_cdrom(cdrom_dev)
     run_cmd(['vmkload_mod', '-u', 'iso9660'])
