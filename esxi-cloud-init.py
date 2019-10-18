@@ -33,19 +33,19 @@ def umount_cdrom(cdrom_dev):
 
 def load_network_data():
     # Should be openstack/latest/network_data.json
-    with open('/vmfs/volumes/cidata/OPENSTAC/LATEST/NETWORK_.JSO', 'r') as fd:
+    with open('/vmfs/volumes/config-2/OPENSTAC/LATEST/NETWORK_.JSO', 'r') as fd:
         return json.loads(fd.read())
 
 def load_meta_data():
     # Should be openstack/latest/meta_data.json
-    with open('/vmfs/volumes/cidata/OPENSTAC/LATEST/META_DAT.JSO', 'r') as fd:
+    with open('/vmfs/volumes/config-2/OPENSTAC/LATEST/META_DAT.JSO', 'r') as fd:
         data = json.loads(fd.read())
         return data
 
 def load_user_data():
     # Should be openstack/latest/user-data
     user_data = {}
-    with open('/vmfs/volumes/cidata/OPENSTAC/LATEST/USER_DAT', 'r') as fd:
+    with open('/vmfs/volumes/config-2/OPENSTAC/LATEST/USER_DAT', 'r') as fd:
         for line in fd.readlines():
             if line.startswith('#'):
                 continue
