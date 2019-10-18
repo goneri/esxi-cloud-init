@@ -1,9 +1,14 @@
 #!/bin/python
-
 import crypt
 import re
 import subprocess
 import json
+import glob
+import time
+import select
+import os
+import fcntl
+
 
 def run_cmd(args, ignore_failure=False):
     print('run: %s' % args)
@@ -127,6 +132,49 @@ def turn_off_firewall():
 def restart_service(service_name):
     run_cmd(['/etc/init.d/%s' % service_name , 'restart'])
 
+def enable_ssh():
+    run_cmd(['vim-cmd', 'hostsvc/enable_ssh'])
+    run_cmd(['vim-cmd', 'hostsvc/start_ssh'])
+
+def create_local_datastore():
+    root_disk = glob.glob('/vmfs/devices/disks/t10*:1')[0].split(':')[0]  # TODO: probably kvm specific
+
+    proc = subprocess.Popen(['partedUtil', 'fixGpt', root_disk], stdout=subprocess.PIPE, stderr=subprocess.PIPE, stdin=subprocess.PIPE)
+    fd = proc.stdout.fileno()
+    fl = fcntl.fcntl(fd, fcntl.F_GETFL)
+    fcntl.fcntl(fd, fcntl.F_SETFL, fl | os.O_NONBLOCK)
+
+    while True:
+        time.sleep(.5)
+        if len(select.select([proc.stdout, proc.stderr], [], [], 0)[0]) == 0:
+            continue
+        out = ''
+        try:
+            out = proc.stdout.read()
+        except TypeError as e:
+            continue
+        if 'Are you sure you want to continue' in out.decode():
+            proc.stdin.write('Y\n'.encode())
+            proc.stdin.flush()
+        elif 'The backup GPT table is not' in out.decode():
+            proc.stdin.write('Fix\n'.encode())
+            proc.stdin.flush()
+
+        if proc.poll() is not None:
+            break
+
+    getptbl_output = subprocess.check_output(['partedUtil', 'getptbl', root_disk]).decode().split('\n')
+    geometry = getptbl_output[1]
+    last_partition = getptbl_output[-2]
+    last_sector_in_use = int(last_partition.split()[2])
+    quantity_of_cylinders = int(geometry.split()[3])
+    new_partition_partnum = max([int(i.split()[0]) for i in getptbl_output[2:-1]]) + 1
+    new_partition_first_sector = last_sector_in_use + 4096
+    new_partition_last_sector = quantity_of_cylinders - 4096
+
+    if new_partition_last_sector - new_partition_first_sector > 4096 * 1024:
+        print(subprocess.check_output(["partedUtil", "add", root_disk, "gpt", "%s %s %s AA31E02A400F11DB9590000C2911D1B8 0" % (new_partition_partnum, new_partition_first_sector, new_partition_last_sector)]))
+        print(subprocess.check_output(["vmkfstools", "-C", "vmfs6", "-S", "local", "%s:%s" % (root_disk, new_partition_partnum)]))
 
 cdrom_dev = find_cdrom_dev()
 try:
@@ -139,9 +187,13 @@ try:
     set_ssh_keys(meta_data)
     user_data = load_user_data()
     set_root_pw(user_data)
+    if user_data.get('ssh_pwauth'):
+        enable_ssh()
+
     allow_nested_vm()
     restart_service('hostd')
     restart_service('vpxa')
+    create_local_datastore()
 finally:
     umount_cdrom(cdrom_dev)
     run_cmd(['vmkload_mod', '-u', 'iso9660'])
