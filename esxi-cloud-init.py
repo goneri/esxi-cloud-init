@@ -49,6 +49,9 @@ def load_user_data():
         for line in fd.readlines():
             if line.startswith('#'):
                 continue
+            if not re.match(r'.*:.+', line):
+                continue
+
             k, v = line.split(': ', 1)
             user_data[k] = v.rstrip()
         return user_data
