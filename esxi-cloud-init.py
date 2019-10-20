@@ -53,6 +53,9 @@ def load_user_data():
                 continue
 
             k, v = line.split(': ', 1)
+            v = v.rstrip()
+            if v.startswith("'") and v.endswith("'"):
+                v = v[1:-1]
             user_data[k] = v.rstrip()
         return user_data
 
