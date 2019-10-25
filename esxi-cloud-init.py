@@ -119,7 +119,7 @@ def allow_nested_vm():
             m = re.match(r'^vmx.allowNested', line)
             if m:
                 return
-    with open('/etc/vmware/config', 'w+') as fd:
+    with open('/etc/vmware/config', 'a+') as fd:
         fd.write('\nvmx.allowNested = "TRUE"\n')
 
 def set_root_pw(user_data):
