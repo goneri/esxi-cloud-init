@@ -44,6 +44,9 @@ def load_meta_data():
 
 def load_user_data():
     # Should be openstack/latest/user-data
+    if not os.path.exists('/vmfs/volumes/config-2/openstack/latest/user_data'):
+        return {}
+
     user_data = {}
     with open('/vmfs/volumes/config-2/openstack/latest/user_data', 'r') as fd:
         for line in fd.readlines():
