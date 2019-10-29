@@ -4,7 +4,7 @@ This project provide a cloud-init for ESXi. It only covers a subset of the
 feature of the real cloud-init.
 
 - hostname
-- network
+- network (Only the first interface)
 - root password
 - SSH key
 - enable SSH server
