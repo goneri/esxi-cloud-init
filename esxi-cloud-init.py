@@ -130,8 +130,8 @@ def allow_nested_vm():
     with open('/etc/vmware/config', 'a+') as fd:
         fd.write('\nvmx.allowNested = "TRUE"\n')
 
-def set_root_pw(user_data):
-    hashed_pw = crypt.crypt(user_data['password'], crypt.mksalt(crypt.METHOD_SHA512))
+def set_root_pw(password):
+    hashed_pw = crypt.crypt(password, crypt.mksalt(crypt.METHOD_SHA512))
     current = open('/etc/shadow', 'r').readlines()
     with open('/etc/shadow', 'w') as fd:
         for line in current:
@@ -199,8 +199,11 @@ try:
     meta_data = load_meta_data()
     set_hostname(meta_data)
     set_ssh_keys(meta_data)
+    if 'admin_pass' in meta_data:
+        set_root_pw(meta_data['admin_pass'])
     user_data = load_user_data()
-    set_root_pw(user_data)
+    if 'password' in user_data:
+        set_root_pw(user_data['password'])
     if user_data.get('ssh_pwauth'):
         enable_ssh()
 
