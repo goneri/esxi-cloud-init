@@ -1,4 +1,4 @@
-# Poor boy's Cloud-Init for ESXi
+# a Cloud-Init script for ESXi
 
 This project provide a cloud-init for ESXi. It only covers a subset of the
 feature of the real cloud-init.
@@ -13,3 +13,11 @@ feature of the real cloud-init.
 
 It reads the configuration from a metadata disk in the OpenStack format.
 So you can use to deploy ESXi on baremetal with OpenStack Ironic.
+
+You can build a cloud image with the following project:
+  https://github.com/virt-lightning/esxi-cloud-images
+
+## Constraint and Limitation
+
+- You must use a config drive
+- Only the first interface is configured
