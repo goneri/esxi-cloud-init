@@ -88,9 +88,9 @@ def set_network(network_data):
     link = link_by_id[ifdef['link']]
     run_cmd(['esxcfg-vmknic', '-d', 'Management Network'])
     if ifdef['type'] == 'ipv4':
-        run_cmd(['esxcfg-vmknic', '-a', '-i', ifdef['ip_address'], '-n', ifdef['netmask'], '-M', link['ethernet_mac_address'], 'Management Network'])
+        run_cmd(['esxcfg-vmknic', '-a', '-i', ifdef['ip_address'], '-n', ifdef['netmask'], '-m', str(link.get('mtu', '1500')), '-M', link['ethernet_mac_address'], 'Management Network'])
     else:
-        run_cmd(['esxcfg-vmknic', '-a', '-i', 'DHCP', '-M', link['ethernet_mac_address'], 'Management Network'])
+        run_cmd(['esxcfg-vmknic', '-a', '-i', 'DHCP', '-m', str(link.get('mtu', '1500')), '-M', link['ethernet_mac_address'], 'Management Network'])
 
     r = {}
     for r in ifdef.get('routes', []):
