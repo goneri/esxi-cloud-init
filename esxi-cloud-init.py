@@ -63,8 +63,8 @@ def load_user_data():
         return user_data
 
 def set_hostname(meta_data):
-    host = meta_data['hostname']
-    run_cmd(['esxcli', 'system', 'hostname', 'set', '--host=%s' % host])
+    fqdn = meta_data['hostname']
+    run_cmd(['esxcli', 'system', 'hostname', 'set', '--fqdn=%s' % fqdn])
 
 def set_network(network_data):
     run_cmd(['esxcfg-vmknic', '-d', 'VM Network'], ignore_failure=True)
