@@ -67,14 +67,7 @@ def set_hostname(meta_data):
     run_cmd(['esxcli', 'system', 'hostname', 'set', '--fqdn=%s' % fqdn])
 
 def set_network(network_data):
-    run_cmd(['esxcfg-vmknic', '-d', 'VM Network'], ignore_failure=True)
     run_cmd(['esxcfg-vmknic', '-d', 'Management Network'], ignore_failure=True)
-    run_cmd(['esxcfg-vswitch', '-d', 'vSwitch0'])
-    run_cmd(['esxcfg-vswitch', '-a', 'vSwitch0'])
-    run_cmd(['esxcfg-vswitch', '-L', 'vmnic0', 'vSwitch0'])
-    run_cmd(['esxcfg-vswitch', '-A', 'VM Network', 'vSwitch0'])
-    run_cmd(['esxcfg-vswitch', '-A', 'Management Network', 'vSwitch0'])
-    run_cmd(['esxcli', 'network', 'ip', 'interface', 'add', '-i', 'vmk0', '-p', 'Management Network'])
     run_cmd(['esxcli', 'network', 'ip', 'set', '--ipv6-enabled=0'])
 
     # ESX's switch has no learning mode and enforce the MAC/port by default
@@ -86,11 +79,10 @@ def set_network(network_data):
     # and only set the first interface
     ifdef = network_data['networks'][0]
     link = link_by_id[ifdef['link']]
-    run_cmd(['esxcfg-vmknic', '-d', 'Management Network'])
     if ifdef['type'] == 'ipv4':
-        run_cmd(['esxcfg-vmknic', '-a', '-i', ifdef['ip_address'], '-n', ifdef['netmask'], '-m', str(link.get('mtu', '1500')), '-M', link['ethernet_mac_address'], 'Management Network'])
+        run_cmd(['esxcfg-vmknic', '-a', '-i', ifdef['ip_address'], '-n', ifdef['netmask'], '-m', str(link.get('mtu', '1500')), '-M', link['ethernet_mac_address'], '-p', 'Management Network'])
     else:
-        run_cmd(['esxcfg-vmknic', '-a', '-i', 'DHCP', '-m', str(link.get('mtu', '1500')), '-M', link['ethernet_mac_address'], 'Management Network'])
+        run_cmd(['esxcfg-vmknic', '-a', '-i', 'DHCP', '-m', str(link.get('mtu', '1500')), '-M', link['ethernet_mac_address'], '-p', 'Management Network'])
 
     r = {}
     for r in ifdef.get('routes', []):
