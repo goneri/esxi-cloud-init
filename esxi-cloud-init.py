@@ -196,8 +196,7 @@ try:
     user_data = load_user_data()
     if 'password' in user_data:
         set_root_pw(user_data['password'])
-    if user_data.get('ssh_pwauth'):
-        enable_ssh()
+    enable_ssh()
 
     allow_nested_vm()
     restart_service('hostd')
