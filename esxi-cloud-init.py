@@ -8,6 +8,7 @@ import time
 import select
 import os
 import fcntl
+import urllib.request
 
 
 def run_cmd(args, ignore_failure=False):
@@ -37,34 +38,51 @@ def load_network_data():
         return json.loads(fd.read())
 
 def load_meta_data():
-    # Should be openstack/latest/meta_data.json
-    with open('/vmfs/volumes/config-2/openstack/latest/meta_data.json', 'r') as fd:
-        data = json.loads(fd.read())
-        return data
+    if os.path.exists('/vmfs/volumes/config-2/openstack/latest/meta_data.json'):
+        fd = open('/vmfs/volumes/config-2/openstack/latest/meta_data.json', 'r')
+        raw_content = fd.read()
+    else:
+        try:
+            fd = urllib.request.urlopen('http://169.254.169.254/openstack/latest/meta_data.json')
+            raw_content = fd.read().decode()
+        except urllib.error.URLError:
+            return {}
+    data = json.loads(raw_content)
+    return data
 
 def load_user_data():
     # Should be openstack/latest/user-data
-    if not os.path.exists('/vmfs/volumes/config-2/openstack/latest/user_data'):
+    content = None
+    try:
+        content = open('/vmfs/volumes/config-2/openstack/latest/user_data', 'r').read()
+    except FileNotFoundError:
+        pass
+    try:
+        if not content:
+            content = urllib.request.urlopen('http://169.254.169.254/openstack/latest/user_data').read().decode()
+    except urllib.error.URLError:
+        pass
+
+    if not content:
         return {}
 
     user_data = {}
-    with open('/vmfs/volumes/config-2/openstack/latest/user_data', 'r') as fd:
-        for line in fd.readlines():
-            if line.startswith('#'):
-                continue
-            if not re.match(r'.*:.+', line):
-                continue
+    for line in content.split("\n"):
+        if line.startswith('#'):
+            continue
+        if not re.match(r'.*:.+', line):
+            continue
 
-            k, v = line.split(': ', 1)
-            v = v.rstrip()
-            if v.startswith("'") and v.endswith("'"):
-                v = v[1:-1]
-            user_data[k] = v.rstrip()
-        return user_data
+        k, v = line.split(': ', 1)
+        v = v.rstrip()
+        if v.startswith("'") and v.endswith("'"):
+            v = v[1:-1]
+        user_data[k] = v.rstrip()
+    return user_data
 
-def set_hostname(meta_data):
-    fqdn = meta_data['hostname']
-    run_cmd(['esxcli', 'system', 'hostname', 'set', '--fqdn=%s' % fqdn])
+def set_hostname(fqdn):
+    if fqdn:
+        run_cmd(['esxcli', 'system', 'hostname', 'set', '--fqdn=%s' % fqdn])
 
 def set_network(network_data):
     run_cmd(['esxcfg-vmknic', '-d', 'Management Network'], ignore_failure=True)
@@ -97,9 +115,11 @@ def set_network(network_data):
         if s['type'] == 'dns':
             run_cmd(['esxcli', 'network', 'ip', 'dns', 'server', 'add', '--server', s['address']])
 
-def set_ssh_keys(meta_data):
+def set_ssh_keys(public_keys):
+    if not public_keys:
+        return
     # A bit hackish because PyYAML because ESXi's Python does not provide PyYAML
-    add_keys = meta_data['public_keys'].values()
+    add_keys = public_keys.values()
     current_keys = []
 
     with open('/etc/ssh/keys-root/authorized_keys', 'r') as fd:
@@ -182,26 +202,70 @@ def create_local_datastore():
         print(subprocess.check_output(["partedUtil", "add", root_disk, "gpt", "%s %s %s AA31E02A400F11DB9590000C2911D1B8 0" % (new_partition_partnum, new_partition_first_sector, new_partition_last_sector)]))
         print(subprocess.check_output(["vmkfstools", "-C", "vmfs6", "-S", "local", "%s:%s" % (root_disk, new_partition_partnum)]))
 
+def get_nic_mac_address(vmnic):
+    # Name    PCI Device    Driver  Admin Status  Link Status  Speed  Duplex  MAC Address         MTU  Description
+    # ------  ------------  ------  ------------  -----------  -----  ------  -----------------  ----  -----------------------------------------------------
+    # vmnic0  0000:00:03.0  e1000   Up            Up            1000  Full    fa:16:3e:25:bd:9f  1500  Intel Corporation 82540EM Gigabit Ethernet Controller
+    # vmnic1  0000:00:04.0  e1000   Up            Up            1000  Full    fa:16:3e:a3:d8:34  1500  Intel Corporation 82540EM Gigabit Ethernet Controller
+    raw = run_cmd(["esxcli", "network", "nic", "list"]).decode()
+    nic_list_lines = raw.split('\n')[2:]
+    print(nic_list_lines)
+    for line in nic_list_lines:
+        cur_vmnic, _, _, _, _, _, _, mac = line.split()[0:8]
+        if cur_vmnic == vmnic:
+            return mac
+
+def default_network_data():
+    # "esxcli network nic list" fails time to time...
+    for _ in range(60):
+        try:
+            mac_address = get_nic_mac_address("vmnic0")
+            break
+        except subprocess.CalledProcessError:
+            pass
+    return {
+        "links": [
+            {
+            "ethernet_mac_address": mac_address,
+            "id": "mylink",
+            "mtu": "1500",
+        }
+        ],
+        "networks": [
+            {
+            "id": "network0",
+            "link": "mylink",
+            "type": "ipv4_dhcp"
+            }
+        ],
+    }
+
+
 cdrom_dev = find_cdrom_dev()
-try:
+if cdrom_dev:
     run_cmd(['vmkload_mod', 'iso9660'])
     mount_cdrom(cdrom_dev)
     network_data = load_network_data()
-    set_network(network_data)
     meta_data = load_meta_data()
-    set_hostname(meta_data)
-    set_ssh_keys(meta_data)
-    if 'admin_pass' in meta_data:
-        set_root_pw(meta_data['admin_pass'])
     user_data = load_user_data()
-    if 'password' in user_data:
-        set_root_pw(user_data['password'])
-    enable_ssh()
-
-    allow_nested_vm()
-    restart_service('hostd')
-    restart_service('vpxa')
-    create_local_datastore()
-finally:
     umount_cdrom(cdrom_dev)
     run_cmd(['vmkload_mod', '-u', 'iso9660'])
+    set_network(network_data)
+else:
+    network_data = default_network_data()
+    set_network(network_data)
+    meta_data = load_meta_data()
+    user_data = load_user_data()
+
+set_hostname(meta_data.get('hostname'))
+set_ssh_keys(meta_data.get('public_keys'))
+if 'admin_pass' in meta_data:
+    set_root_pw(meta_data['admin_pass'])
+if 'password' in user_data:
+    set_root_pw(user_data['password'])
+enable_ssh()
+
+allow_nested_vm()
+restart_service('hostd')
+restart_service('vpxa')
+create_local_datastore()

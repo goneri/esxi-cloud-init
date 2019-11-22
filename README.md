@@ -11,7 +11,7 @@ feature of the real cloud-init.
 - enable the ability to start Nested ESXI VM
 - create a datatore called 'local' with the space left on the root disk
 
-It reads the configuration from a metadata disk in the OpenStack format.
+It reads the configuration from OpenStack metadata (HTTP or config-disk).
 So you can use to deploy ESXi on baremetal with OpenStack Ironic.
 
 You can build a cloud image with the following project:
@@ -19,5 +19,4 @@ You can build a cloud image with the following project:
 
 ## Constraint and Limitation
 
-- You must use a config drive
 - Only the first interface is configured
