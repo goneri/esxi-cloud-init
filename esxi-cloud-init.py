@@ -128,7 +128,7 @@ def set_ssh_keys(public_keys):
             if m:
                 current_keys.append = fd.group(1)
 
-    with open('/etc/ssh/keys-root/authorized_keys', 'w+') as fd:
+    with open('/etc/ssh/keys-root/authorized_keys', 'a+') as fd:
         for key in set(add_keys):
             if key not in current_keys:
                 fd.write(key + '\n')
