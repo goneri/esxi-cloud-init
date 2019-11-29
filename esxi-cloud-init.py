@@ -179,7 +179,7 @@ def create_local_datastore():
         out = ''
         try:
             out = proc.stdout.read()
-        except TypeError as e:
+        except TypeError:
             continue
         if 'Are you sure you want to continue' in out.decode():
             proc.stdin.write('Y\n'.encode())
