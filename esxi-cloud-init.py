@@ -258,7 +258,9 @@ else:
     meta_data = load_meta_data()
     user_data = load_user_data()
 
-set_hostname(meta_data.get('hostname'))
+hostname = user_data.get('fqdn') or user_data.get('hostname') or meta_data.get('hostname')
+if hostname:
+    set_hostname(hostname)
 set_ssh_keys(meta_data.get('public_keys'))
 if 'admin_pass' in meta_data:
     set_root_pw(meta_data['admin_pass'])
