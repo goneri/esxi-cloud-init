@@ -269,6 +269,7 @@ if 'password' in user_data:
     set_root_pw(user_data['password'])
 enable_ssh()
 
+turn_off_firewall()
 allow_nested_vm()
 restart_service('hostd')
 restart_service('vpxa')
