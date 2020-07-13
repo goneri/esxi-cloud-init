@@ -88,7 +88,6 @@ def set_network(network_data):
     run_cmd(['esxcfg-vswitch', '-a', 'vSwitch0'], ignore_failure=True)
     run_cmd(['esxcfg-vswitch', '-A', 'Management Network', 'vSwitch0'], ignore_failure=True)
     run_cmd(['esxcfg-vswitch', '-L', 'vmnic0', '-p', 'Management Network', 'vSwitch0'], ignore_failure=True)
-    run_cmd(['esxcli', 'network', 'ip', 'set', '--ipv6-enabled=0'])
 
     # ESX's switch has no learning mode and enforce the MAC/port by default
     # With this line, we ensure a nested ESXi can contact the outside world
