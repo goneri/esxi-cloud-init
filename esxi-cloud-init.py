@@ -163,6 +163,9 @@ def enable_ssh():
     run_cmd(['vim-cmd', 'hostsvc/enable_ssh'])
     run_cmd(['vim-cmd', 'hostsvc/start_ssh'])
 
+def localhost_over_ipv4():
+    run_cmd(['sed', '-i', "s,^::1,#::1,", '/etc/hosts'])
+
 def create_local_datastore():
     root_disk = glob.glob('/vmfs/devices/disks/t10*:1')[0].split(':')[0]  # TODO: probably kvm specific
 
@@ -240,8 +243,8 @@ def default_network_data():
             }
         ],
     }
-
-
+# See: https://github.com/ansible-collections/community.vmware/issues/144
+localhost_over_ipv4()
 cdrom_dev = find_cdrom_dev()
 if cdrom_dev:
     run_cmd(['vmkload_mod', 'iso9660'])
