@@ -254,10 +254,16 @@ if cdrom_dev:
     user_data = load_user_data()
     umount_cdrom(cdrom_dev)
     run_cmd(['vmkload_mod', '-u', 'iso9660'])
-    set_network(network_data)
+    try:
+        set_network(network_data)
+    except subprocess.CalledProcessError:
+        pass
 else:
     network_data = default_network_data()
-    set_network(network_data)
+    try:
+        set_network(network_data)
+    except subprocess.CalledProcessError:
+        pass
     meta_data = load_meta_data()
     user_data = load_user_data()
 
