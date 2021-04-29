@@ -243,6 +243,13 @@ def default_network_data():
             }
         ],
     }
+
+
+def run_commands(commands):
+    for c in commands:
+        run_cmd(c, ignore_failure=True)
+
+
 # See: https://github.com/ansible-collections/community.vmware/issues/144
 localhost_over_ipv4()
 cdrom_dev = find_cdrom_dev()
@@ -282,3 +289,4 @@ allow_nested_vm()
 restart_service('hostd')
 restart_service('vpxa')
 create_local_datastore()
+run_commands(user_data.get("runcmd", []))
