@@ -166,6 +166,9 @@ def enable_ssh():
 def localhost_over_ipv4():
     run_cmd(['sed', '-i', "s,^::1,#::1,", '/etc/hosts'])
 
+def turn_tally2_off():
+    run_cmd(['sed', '-i', "s,^,# disabled by esxi-cloud-init.py,", '/etc/pam.d/system-auth-tally'])
+
 def create_local_datastore():
     root_disk = glob.glob('/vmfs/devices/disks/t10*:1')[0].split(':')[0]  # TODO: probably kvm specific
 
@@ -252,6 +255,7 @@ def run_commands(commands):
 
 # See: https://github.com/ansible-collections/community.vmware/issues/144
 localhost_over_ipv4()
+turn_tally2_off()
 cdrom_dev = find_cdrom_dev()
 if cdrom_dev:
     run_cmd(['vmkload_mod', 'iso9660'])
@@ -288,5 +292,6 @@ turn_off_firewall()
 allow_nested_vm()
 restart_service('hostd')
 restart_service('vpxa')
+turn_tally2_off()
 create_local_datastore()
 run_commands(user_data.get("runcmd", []))
