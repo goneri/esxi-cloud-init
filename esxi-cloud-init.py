@@ -11,13 +11,19 @@ import fcntl
 import urllib.request
 
 
-def run_cmd(args, ignore_failure=False):
+def run_cmd(args, ignore_failure=False, retry=1):
     print('run: %s' % args)
-    try:
-        return subprocess.check_output(args)
-    except subprocess.CalledProcessError:
-        if not ignore_failure:
-            raise
+
+    while retry > 0:
+        retry -= 1
+        try:
+            return subprocess.check_output(args)
+        except subprocess.CalledProcessError:
+            if retry:
+                time.sleep(1)
+                continue
+            if not ignore_failure:
+                raise
 
 def find_cdrom_dev():
     mpath_b = run_cmd(['esxcfg-mpath', '-b'])
@@ -82,7 +88,7 @@ def load_user_data():
 
 def set_hostname(fqdn):
     if fqdn:
-        run_cmd(['esxcli', 'system', 'hostname', 'set', '--fqdn=%s' % fqdn])
+        run_cmd(['esxcli', 'system', 'hostname', 'set', '--fqdn=%s' % fqdn], retry=3)
 
 def set_network(network_data):
     run_cmd(['esxcfg-vswitch', '-a', 'vSwitch0'], ignore_failure=True)
