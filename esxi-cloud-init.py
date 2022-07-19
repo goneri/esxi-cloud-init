@@ -131,7 +131,7 @@ def set_ssh_keys(public_keys):
 
     with open('/etc/ssh/keys-root/authorized_keys', 'r') as fd:
         for line in fd.readlines():
-            m = re.match(r'[^#].*(ssh-rsa\s\S+).*', line)
+            m = re.match(r'[^#].*(ssh-\S+\s\S+).*', line)
             if m:
                 current_keys.append = fd.group(1)
 
